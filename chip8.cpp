@@ -1,21 +1,22 @@
 #include "chip8.hpp"
 #include "raylib.h"
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 
 Chip8::Chip8() {
-  pc = 0x200;
+  pc = ROM_START_ADDRESS;
   I = 0;
   sp = 0;
   delay_timer = 0;
   sound_timer = 0;
 
-  memory.assign(4096, 0);
-  V.assign(16, 0);
-  display.assign(64 * 32, 0);
-  stack.assign(16, 0);
+  memory.assign(MEMORY_SIZE, 0);
+  V.assign(NUM_REGISTERS, 0);
+  display.assign(SCREEN_WIDTH * SCREEN_HEIGHT, 0);
+  stack.assign(STACK_SIZE, 0);
 
-  uint8_t fontset[80] = {
+  uint8_t fontset[FONTSET_SIZE] = {
       0xF0, 0x90, 0x90, 0x90, 0xF0, 0x20, 0x60, 0x20, 0x20, 0x70, 0xF0, 0x10,
       0xF0, 0x80, 0xF0, 0xF0, 0x10, 0xF0, 0x10, 0xF0, 0x90, 0x90, 0xF0, 0x10,
       0x10, 0xF0, 0x80, 0xF0, 0x10, 0xF0, 0xF0, 0x80, 0xF0, 0x90, 0xF0, 0xF0,
@@ -23,30 +24,36 @@ Chip8::Chip8() {
       0x10, 0xF0, 0xF0, 0x90, 0xF0, 0x90, 0x90, 0xE0, 0x90, 0xE0, 0x90, 0xE0,
       0xF0, 0x80, 0x80, 0x80, 0xF0, 0xE0, 0x90, 0x90, 0x90, 0xE0, 0xF0, 0x80,
       0xF0, 0x80, 0xF0, 0xF0, 0x80, 0xF0, 0x80, 0x80};
-  for (int i = 0; i < 80; ++i)
+
+  for (unsigned int i = 0; i < FONTSET_SIZE; ++i) {
     memory[i] = fontset[i];
+  }
 }
 
-void Chip8::loadRom(const char *filename) {
+bool Chip8::loadRom(const char *filename) {
   std::ifstream file(filename, std::ios::binary | std::ios::ate);
   if (!file.is_open()) {
     std::cerr << "Failed to open ROM: " << filename << std::endl;
-    exit(1);
+    return false;
   }
+
   std::streampos size = file.tellg();
-  if (size > (4096 - 0x200)) {
+  if (size > (MEMORY_SIZE - ROM_START_ADDRESS)) {
     std::cerr << "ROM is too large for memory." << std::endl;
-    exit(1);
+    return false;
   }
+
   file.seekg(0, std::ios::beg);
-  file.read(reinterpret_cast<char *>(&memory[0x200]), size);
+  file.read(reinterpret_cast<char *>(&memory[ROM_START_ADDRESS]), size);
   file.close();
+  return true;
 }
 
+uint8_t Chip8::getSoundTimer() const { return sound_timer; }
+
 void Chip8::handleInput() {
-  for (int i = 0; i < 16; ++i) {
+  for (unsigned int i = 0; i < KEYPAD_SIZE; ++i)
     keypad[i] = 0;
-  }
   if (IsKeyDown(KEY_W))
     keypad[0x1] = 1;
   if (IsKeyDown(KEY_S))
@@ -90,12 +97,10 @@ void Chip8::emulateCycle() {
   case 0x0000:
     switch (NN) {
     case 0xE0:
-      display.assign(64 * 32, 0);
+      display.assign(SCREEN_WIDTH * SCREEN_HEIGHT, 0);
       break;
     case 0xEE:
       pc = stack[--sp];
-      break;
-    default:
       break;
     }
     break;
@@ -180,14 +185,14 @@ void Chip8::emulateCycle() {
     V[X] = (rand() % 256) & NN;
     break;
   case 0xD000: {
-    uint8_t coordX = V[X] % 64;
-    uint8_t coordY = V[Y] % 32;
+    uint8_t coordX = V[X] % SCREEN_WIDTH;
+    uint8_t coordY = V[Y] % SCREEN_HEIGHT;
     V[0xF] = 0;
     for (int row = 0; row < N; ++row) {
       uint8_t spriteByte = memory[I + row];
       for (int col = 0; col < 8; ++col) {
         if ((spriteByte & (0x80 >> col)) != 0) {
-          size_t index = (coordY + row) * 64 + (coordX + col);
+          size_t index = (coordY + row) * SCREEN_WIDTH + (coordX + col);
           if (index < display.size()) {
             if (display[index] == 1)
               V[0xF] = 1;
@@ -217,7 +222,7 @@ void Chip8::emulateCycle() {
       break;
     case 0x0A: {
       bool keyPressed = false;
-      for (int i = 0; i < 16; ++i) {
+      for (unsigned int i = 0; i < KEYPAD_SIZE; ++i) {
         if (keypad[i]) {
           V[X] = i;
           keyPressed = true;
@@ -254,8 +259,6 @@ void Chip8::emulateCycle() {
         V[i] = memory[I + i];
       break;
     }
-    break;
-  default:
     break;
   }
 }
