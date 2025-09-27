@@ -3,18 +3,10 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <vector>
 
 Chip8::Chip8() {
-  pc = ROM_START_ADDRESS;
-  I = 0;
-  sp = 0;
-  delay_timer = 0;
-  sound_timer = 0;
-
-  memory.assign(MEMORY_SIZE, 0);
-  V.assign(NUM_REGISTERS, 0);
-  display.assign(SCREEN_WIDTH * SCREEN_HEIGHT, 0);
-  stack.assign(STACK_SIZE, 0);
+  reset();
 
   uint8_t fontset[FONTSET_SIZE] = {
       0xF0, 0x90, 0x90, 0x90, 0xF0, 0x20, 0x60, 0x20, 0x20, 0x70, 0xF0, 0x10,
@@ -28,6 +20,20 @@ Chip8::Chip8() {
   for (unsigned int i = 0; i < FONTSET_SIZE; ++i) {
     memory[i] = fontset[i];
   }
+}
+
+void Chip8::reset() {
+  pc = ROM_START_ADDRESS;
+  I = 0;
+  sp = 0;
+  delay_timer = 0;
+  sound_timer = 0;
+  romLoaded = false;
+
+  memory.assign(MEMORY_SIZE, 0);
+  V.assign(NUM_REGISTERS, 0);
+  display.assign(SCREEN_WIDTH * SCREEN_HEIGHT, 0);
+  stack.assign(STACK_SIZE, 0);
 }
 
 bool Chip8::loadRom(const char *filename) {
@@ -46,8 +52,12 @@ bool Chip8::loadRom(const char *filename) {
   file.seekg(0, std::ios::beg);
   file.read(reinterpret_cast<char *>(&memory[ROM_START_ADDRESS]), size);
   file.close();
+
+  romLoaded = true;
   return true;
 }
+
+bool Chip8::isRomLoaded() const { return romLoaded; }
 
 uint8_t Chip8::getSoundTimer() const { return sound_timer; }
 

@@ -17,11 +17,13 @@ public:
   std::vector<uint8_t> display;
 
   Chip8();
+  void reset();
   bool loadRom(const char *filename);
   void handleInput();
   void updateTimers();
   void emulateCycle();
   uint8_t getSoundTimer() const;
+  bool isRomLoaded() const;
 
 private:
   std::vector<uint8_t> memory;
@@ -32,4 +34,5 @@ private:
   uint16_t I;
   uint8_t delay_timer;
   uint8_t sound_timer;
+  bool romLoaded;
 };
