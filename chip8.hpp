@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <vector>
+#include <functional>
 
 class Chip8 {
 public:
@@ -26,6 +27,7 @@ public:
   bool isRomLoaded() const;
 
 private:
+  uint16_t opcode;
   std::vector<uint8_t> memory;
   std::vector<uint8_t> V;
   std::vector<uint16_t> stack;
@@ -35,4 +37,25 @@ private:
   uint8_t delay_timer;
   uint8_t sound_timer;
   bool romLoaded;
+
+  std::vector<std::function<void()>> opcodeTable;
+
+  void loadFontset();
+
+  void op_00E0_00EE();
+  void op_1NNN();
+  void op_2NNN();
+  void op_3XNN();
+  void op_4XNN();
+  void op_5XY0();
+  void op_6XNN();
+  void op_7XNN();
+  void op_8XY_();
+  void op_9XY0();
+  void op_ANNN();
+  void op_BNNN();
+  void op_CXNN();
+  void op_DXYN();
+  void op_EX_();
+  void op_FX_();
 };
